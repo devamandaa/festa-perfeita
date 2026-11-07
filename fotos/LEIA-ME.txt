@@ -1,0 +1,4 @@
+Coloque aqui as fotos reais dos itens, com o id do item como nome do arquivo:
+arco.jpg, painel.jpg, flores.jpg, neon.jpg, mesa.jpg, sofa.jpg, puff.jpg,
+cadeira.jpg, louca.jpg, taca.jpg, cascata.jpg, pipoca.jpg
+(proporcao 4:3 fica melhor). O site usa a foto automaticamente; sem foto, mostra a ilustracao.
