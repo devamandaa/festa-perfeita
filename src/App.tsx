@@ -67,12 +67,22 @@ function Foto({ item, grande = false }: { item: Item; grande?: boolean }) {
   return (
     <div className={`foto cat-${item.categoria === 'Itens de Festa' ? 'festa' : item.categoria === 'Móveis' ? 'moveis' : 'deco'} ${grande ? 'grande' : ''}`}>
       {!erro && (
-        <img
-          src={`/fotos/${item.id}.jpg`}
-          alt={item.nome}
-          loading="lazy"
-          onError={() => setErro(true)}
-        />
+        <>
+          <img
+            className="fundo"
+            src={`${import.meta.env.BASE_URL}fotos/${item.id}.jpg`}
+            alt=""
+            aria-hidden
+            loading="lazy"
+          />
+          <img
+            className="principal"
+            src={`${import.meta.env.BASE_URL}fotos/${item.id}.jpg`}
+            alt={item.nome}
+            loading="lazy"
+            onError={() => setErro(true)}
+          />
+        </>
       )}
       {erro && (
         <span className="emoji" role="img" aria-label={item.nome}>
@@ -87,15 +97,15 @@ function Baloes() {
   return (
     <svg className="baloes" viewBox="0 0 420 460" aria-hidden>
       <defs>
-        <radialGradient id="g1" cx="35%" cy="30%"><stop offset="0" stopColor="#a995f5" /><stop offset="1" stopColor="#5b3fd0" /></radialGradient>
-        <radialGradient id="g2" cx="35%" cy="30%"><stop offset="0" stopColor="#8cc0ff" /><stop offset="1" stopColor="#2f6fed" /></radialGradient>
-        <radialGradient id="g3" cx="35%" cy="30%"><stop offset="0" stopColor="#c9d6ff" /><stop offset="1" stopColor="#4f5fd6" /></radialGradient>
-        <radialGradient id="g4" cx="35%" cy="30%"><stop offset="0" stopColor="#bfe6ff" /><stop offset="1" stopColor="#38a3e8" /></radialGradient>
+        <radialGradient id="g1" cx="35%" cy="30%"><stop offset="0" stopColor="#d9c4ff" /><stop offset="1" stopColor="#a46cf0" /></radialGradient>
+        <radialGradient id="g2" cx="35%" cy="30%"><stop offset="0" stopColor="#ff9ccf" /><stop offset="1" stopColor="#e83e9c" /></radialGradient>
+        <radialGradient id="g3" cx="35%" cy="30%"><stop offset="0" stopColor="#fff1a8" /><stop offset="1" stopColor="#f5b800" /></radialGradient>
+        <radialGradient id="g4" cx="35%" cy="30%"><stop offset="0" stopColor="#ffc2e2" /><stop offset="1" stopColor="#f0509f" /></radialGradient>
       </defs>
-      <g className="b b1"><path d="M215 250 C200 330 230 380 210 450" stroke="#4b2fb0" strokeWidth="2" fill="none" /><ellipse cx="215" cy="150" rx="82" ry="100" fill="url(#g1)" /><ellipse cx="185" cy="105" rx="14" ry="26" fill="#fff" opacity=".35" transform="rotate(25 185 105)" /><path d="M207 250 l8 12 l8 -12z" fill="#5b3fd0" /></g>
-      <g className="b b2"><path d="M110 210 C120 300 190 350 210 450" stroke="#1f55c4" strokeWidth="2" fill="none" /><ellipse cx="100" cy="150" rx="62" ry="76" fill="url(#g2)" /><ellipse cx="80" cy="115" rx="10" ry="19" fill="#fff" opacity=".4" transform="rotate(25 80 115)" /></g>
-      <g className="b b3"><path d="M330 220 C320 310 250 360 210 450" stroke="#3b2a8f" strokeWidth="2" fill="none" /><ellipse cx="330" cy="150" rx="62" ry="76" fill="url(#g3)" /><ellipse cx="310" cy="115" rx="10" ry="19" fill="#fff" opacity=".4" transform="rotate(25 310 115)" /></g>
-      <g className="b b4"><path d="M270 80 C280 200 230 330 210 450" stroke="#1f7fc4" strokeWidth="2" fill="none" /><ellipse cx="275" cy="48" rx="42" ry="52" fill="url(#g4)" /><ellipse cx="262" cy="28" rx="7" ry="13" fill="#fff" opacity=".4" transform="rotate(25 262 28)" /></g>
+      <g className="b b1"><path d="M215 250 C200 330 230 380 210 450" stroke="#8f55dd" strokeWidth="2" fill="none" /><ellipse cx="215" cy="150" rx="82" ry="100" fill="url(#g1)" /><ellipse cx="185" cy="105" rx="14" ry="26" fill="#fff" opacity=".35" transform="rotate(25 185 105)" /><path d="M207 250 l8 12 l8 -12z" fill="#a46cf0" /></g>
+      <g className="b b2"><path d="M110 210 C120 300 190 350 210 450" stroke="#d6368a" strokeWidth="2" fill="none" /><ellipse cx="100" cy="150" rx="62" ry="76" fill="url(#g2)" /><ellipse cx="80" cy="115" rx="10" ry="19" fill="#fff" opacity=".4" transform="rotate(25 80 115)" /></g>
+      <g className="b b3"><path d="M330 220 C320 310 250 360 210 450" stroke="#d99a00" strokeWidth="2" fill="none" /><ellipse cx="330" cy="150" rx="62" ry="76" fill="url(#g3)" /><ellipse cx="310" cy="115" rx="10" ry="19" fill="#fff" opacity=".4" transform="rotate(25 310 115)" /></g>
+      <g className="b b4"><path d="M270 80 C280 200 230 330 210 450" stroke="#c9a000" strokeWidth="2" fill="none" /><ellipse cx="275" cy="48" rx="42" ry="52" fill="url(#g4)" /><ellipse cx="262" cy="28" rx="7" ry="13" fill="#fff" opacity=".4" transform="rotate(25 262 28)" /></g>
     </svg>
   )
 }
@@ -109,11 +119,12 @@ export default function App() {
   const [busca, setBusca] = useState('')
   const [cat, setCat] = useState<'Todos' | Categoria>('Todos')
   const [ordem, setOrdem] = useState<'nome' | 'menor' | 'maior'>('nome')
-  const [soDisp, setSoDisp] = useState(false)
   const [aberto, setAberto] = useState(false)
   const [detalhe, setDetalhe] = useState<Item | null>(null)
   const [cliente, setCliente] = useState('')
   const [telefone, setTelefone] = useState('')
+  const [etapa, setEtapa] = useState<'carrinho' | 'checkout'>('carrinho')
+  const [pagamento, setPagamento] = useState('Pix')
   const [aviso, setAviso] = useState('')
   const [toast, setToast] = useState('')
   const [sucesso, setSucesso] = useState<Reserva | null>(null)
@@ -150,13 +161,12 @@ export default function App() {
     const l = ITENS.filter(
       (i) =>
         (cat === 'Todos' || i.categoria === cat) &&
-        i.nome.toLowerCase().includes(busca.toLowerCase()) &&
-        (!soDisp || disponivel(i, reservas, inicio, fim) > 0),
+        i.nome.toLowerCase().includes(busca.toLowerCase()),
     )
     return [...l].sort((a, b) =>
       ordem === 'nome' ? a.nome.localeCompare(b.nome) : ordem === 'menor' ? a.preco - b.preco : b.preco - a.preco,
     )
-  }, [cat, busca, ordem, soDisp, reservas, inicio, fim])
+  }, [cat, busca, ordem])
 
   const linhas = Object.entries(carrinho)
     .filter(([, q]) => q > 0)
@@ -173,7 +183,7 @@ export default function App() {
     const novo = Math.min(max, Math.max(0, atual + delta))
     if (delta > 0 && novo === atual) return setToast(`Só temos ${max} unidade(s) de "${item.nome}" nesse período.`)
     setCarrinho((c) => ({ ...c, [item.id]: novo }))
-    if (delta > 0 && atual === 0) setToast(`${item.nome} adicionado ao orçamento`)
+    if (delta > 0 && atual === 0) setToast(`${item.nome} adicionado ao carrinho`)
   }
 
   function confirmar() {
@@ -196,10 +206,12 @@ export default function App() {
       telefone: telefone.trim(),
       status: 'pendente',
       total,
+      pagamento,
     }
     setReservas((r) => [nova, ...r])
     setCarrinho({})
     setAberto(false)
+    setEtapa('carrinho')
     setSucesso(nova)
   }
 
@@ -207,7 +219,7 @@ export default function App() {
     const itens = r.itens
       .map((i) => `• ${i.qtd}x ${ITENS.find((x) => x.id === i.itemId)?.nome}`)
       .join('\n')
-    const msg = `Olá! Fiz um pedido no site Festa Perfeita.\n\nNome: ${r.cliente}\nPeríodo: ${fmt(r.inicio)} a ${fmt(r.fim)}\n${itens}\nTotal: ${brl(r.total)}\nPedido nº ${r.id.slice(0, 6).toUpperCase()}`
+    const msg = `Olá! Fiz um pedido no site Festa Perfeita.\n\nNome: ${r.cliente}\nPeríodo: ${fmt(r.inicio)} a ${fmt(r.fim)}\n${itens}\nPagamento: ${r.pagamento ?? '-'}\nTotal: ${brl(r.total)}\nPedido nº ${r.id.slice(0, 6).toUpperCase()}`
     return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`
   }
 
@@ -244,8 +256,8 @@ export default function App() {
             {visao === 'loja' ? 'Área da locadora' : '← Voltar à loja'}
           </button>
           {visao === 'loja' && (
-            <button className="carrinho" onClick={() => { setAberto(true); setMenu(false) }}>
-              Orçamento{totalItens > 0 && <span className="badge">{totalItens}</span>}
+            <button className="carrinho" onClick={() => { setEtapa('carrinho'); setAberto(true); setMenu(false) }}>
+              🛒 Carrinho{totalItens > 0 && <span className="badge">{totalItens}</span>}
             </button>
           )}
         </nav>
@@ -256,7 +268,6 @@ export default function App() {
       ) : (
         <main>
           <section className="hero" id="inicio">
-            <span className="confete c1" /><span className="confete c2" /><span className="confete c3" /><span className="confete c4" />
             <div className="hero-texto">
               <p className="eyebrow">Aluguel de itens para decoração de festas</p>
               <h1>
@@ -334,10 +345,6 @@ export default function App() {
                   </button>
                 ))}
               </div>
-              <label className="check">
-                <input type="checkbox" checked={soDisp} onChange={(e) => setSoDisp(e.target.checked)} />
-                Só disponíveis
-              </label>
             </div>
             {periodoOk ? (
               <p className="periodo">📅 {fmt(inicio)} a {fmt(fim)} · {qtdDias} dia(s)</p>
@@ -365,7 +372,7 @@ export default function App() {
                       </p>
                       {n === 0 ? (
                         <button className="btn pequeno cheio" disabled={livre === 0} onClick={() => alterar(item, 1)}>
-                          Adicionar ao orçamento
+                          Adicionar ao carrinho
                         </button>
                       ) : (
                         <div className="qtd">
@@ -462,7 +469,7 @@ export default function App() {
             <h2>Vamos planejar sua festa?</h2>
             <p>Fale com a gente pelo WhatsApp ou comece o orçamento agora.</p>
             <div className="hero-acoes centro">
-              <a className="btn grande branco" href="#catalogo">Montar orçamento</a>
+              <a className="btn grande branco" href="#catalogo">Montar meu carrinho</a>
               <a className="btn grande contorno" href={`https://wa.me/${WHATSAPP}`} target="_blank" rel="noreferrer">Falar no WhatsApp</a>
             </div>
           </section>
@@ -505,7 +512,7 @@ export default function App() {
                 disabled={disponivel(detalhe, reservas, inicio, fim) === 0}
                 onClick={() => { alterar(detalhe, 1); setDetalhe(null) }}
               >
-                Adicionar ao orçamento
+                Adicionar ao carrinho
               </button>
             </div>
           </div>
@@ -530,33 +537,71 @@ export default function App() {
 
       {aberto && (
         <div className="fundo" onClick={() => setAberto(false)}>
-          <aside className="gaveta" onClick={(e) => e.stopPropagation()} aria-label="Orçamento">
+          <aside className="gaveta" onClick={(e) => e.stopPropagation()} aria-label="Carrinho">
             <div className="gaveta-topo">
-              <h2>Seu orçamento</h2>
+              <h2>{etapa === 'carrinho' ? '🛒 Seu carrinho' : 'Finalizar compra'}</h2>
               <button className="fechar estatico" onClick={() => setAberto(false)} aria-label="Fechar">✕</button>
             </div>
             <p className="sub">
               {periodoOk ? `${qtdDias} dia(s): ${fmt(inicio)} a ${fmt(fim)}` : 'Escolha o período no catálogo para calcular o total.'}
             </p>
             {linhas.length === 0 ? (
-              <p className="vazio">Nenhum item adicionado ainda.</p>
+              <p className="vazio">Seu carrinho está vazio.</p>
             ) : (
               <ul className="linhas">
                 {linhas.map((l) => (
                   <li key={l.item.id}>
-                    <span>{l.item.emoji} {l.item.nome} × {l.qtd}</span>
+                    <span>{l.item.emoji} {l.item.nome}</span>
                     <span>{brl(l.subtotal)}</span>
-                    <button className="link" onClick={() => setCarrinho((c) => ({ ...c, [l.item.id]: 0 }))}>remover</button>
+                    {etapa === 'carrinho' ? (
+                      <div className="qtd mini">
+                        <button onClick={() => alterar(l.item, -1)} aria-label="Remover um">−</button>
+                        <span>{l.qtd}</span>
+                        <button onClick={() => alterar(l.item, 1)} aria-label="Adicionar um">+</button>
+                        <button className="link" onClick={() => setCarrinho((c) => ({ ...c, [l.item.id]: 0 }))}>remover</button>
+                      </div>
+                    ) : (
+                      <small>{l.qtd} × {brl(l.item.preco)} × {qtdDias} dia(s)</small>
+                    )}
                   </li>
                 ))}
               </ul>
             )}
             <p className="total">Total <strong>{brl(total)}</strong></p>
-            <label>Nome<input value={cliente} onChange={(e) => setCliente(e.target.value)} autoComplete="name" /></label>
-            <label>WhatsApp<input value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(45) 90000-0000" inputMode="tel" autoComplete="tel" /></label>
-            {aviso && <p className="erro">{aviso}</p>}
-            <button className="btn cheio" onClick={confirmar}>Solicitar reserva</button>
-            <p className="nota">Sem compromisso: a reserva só é confirmada após a aprovação da locadora.</p>
+            {etapa === 'carrinho' ? (
+              <>
+                {aviso && <p className="erro">{aviso}</p>}
+                <button
+                  className="btn cheio"
+                  onClick={() => {
+                    if (!linhas.length) return setAviso('Adicione pelo menos um item.')
+                    if (!periodoOk) return setAviso('Escolha o período da festa (início e fim).')
+                    setAviso('')
+                    setEtapa('checkout')
+                  }}
+                >
+                  Finalizar compra
+                </button>
+                <button className="link" onClick={() => setAberto(false)}>Continuar escolhendo</button>
+              </>
+            ) : (
+              <>
+                <label>Nome<input value={cliente} onChange={(e) => setCliente(e.target.value)} autoComplete="name" /></label>
+                <label>WhatsApp<input value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(45) 90000-0000" inputMode="tel" autoComplete="tel" /></label>
+                <label>Forma de pagamento
+                  <select value={pagamento} onChange={(e) => setPagamento(e.target.value)}>
+                    <option>Pix</option>
+                    <option>Cartão de crédito</option>
+                    <option>Cartão de débito</option>
+                    <option>Dinheiro na entrega</option>
+                  </select>
+                </label>
+                {aviso && <p className="erro">{aviso}</p>}
+                <button className="btn cheio" onClick={confirmar}>Confirmar pedido</button>
+                <button className="link" onClick={() => { setAviso(''); setEtapa('carrinho') }}>← Voltar ao carrinho</button>
+                <p className="nota">A reserva só é confirmada após a aprovação da locadora.</p>
+              </>
+            )}
           </aside>
         </div>
       )}

@@ -1,17 +1,19 @@
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Playfair+Display:ital,wght@1,500;1,600&display=swap');
 
 :root{
-  --prim:#6a43d8;      /* roxo vibrante */
-  --prim-esc:#4b2fb0;  /* roxo escuro */
-  --prof:#2c2487;      /* índigo profundo */
-  --azul:#2f6fed;      /* azul */
-  --texto:#1f1b3d;
-  --borda:#e0dcf5;
+  --prim:#a46cf0;      /* lilás */
+  --prim-esc:#d6368a;  /* rosa escuro */
+  --prof:#7b4bb8;      /* lilás escuro */
+  --amarelo:#ffc233;
+  --azul:#e83e9c;      /* rosa */
+  --rosa-cl:#ffd6ec;
+  --texto:#000;
+  --borda:#f3dcf0;
   --sans:'Nunito',system-ui,sans-serif;
   --script:'Playfair Display',Georgia,serif;
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{margin:0;font-family:var(--sans);color:var(--texto);background:#f8f7fd;line-height:1.5}
+body{margin:0;font-family:var(--sans);color:var(--texto);background:#fdf6fb;line-height:1.5}
 #root{min-height:100vh;display:flex;flex-direction:column}
 #root>main{flex:1}
