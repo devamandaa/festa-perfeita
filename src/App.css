@@ -215,3 +215,54 @@ th{background:#f1e6fd;color:var(--prim-esc);font-size:.85rem}
 }
 @media(max-width:520px){.passos{grid-template-columns:1fr}.secao{padding-block:52px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.revelar{opacity:1;transform:none}}
+
+/* ---------- Painel: login, itens, bloqueios ---------- */
+.login-caixa{max-width:380px;display:flex;flex-direction:column;gap:14px;margin-top:8px}
+.painel-topo{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.painel-topo h2{margin-top:0}
+.itens-topo{align-items:center;margin-top:28px}
+.itens-topo h3{margin:0}
+.filtros-pedidos{margin:6px 0 14px}
+.entrega-info{color:#000;font-weight:600}
+.perigo{color:#b3261e}
+.bloqueio-form{align-items:flex-end;margin-bottom:10px}
+.lista-bloqueios{list-style:none;padding:0;margin:8px 0 24px;display:grid;gap:8px}
+.lista-bloqueios li{display:flex;justify-content:space-between;gap:12px;background:#fff;border:1px solid var(--borda);border-radius:14px;padding:10px 16px}
+.editor-itens{display:grid;gap:14px}
+.item-edit{display:grid;grid-template-columns:150px 1fr;gap:18px;align-items:start}
+.item-edit-foto{display:flex;flex-direction:column;align-items:center;gap:8px}
+.item-edit-foto img,.item-edit-foto>span{width:130px;height:100px;object-fit:cover;border-radius:14px;background:var(--borda);display:grid;place-items:center;font-size:2.4rem}
+.arquivo{position:relative;overflow:hidden;cursor:pointer}
+.arquivo input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.item-edit-campos{display:flex;flex-direction:column;gap:10px}
+.linha-campos{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.item-edit-rodape{display:flex;justify-content:space-between;align-items:center;font-weight:800;color:var(--prim-esc)}
+.item-edit-rodape small{color:#000;font-weight:600}
+.item-edit input,.item-edit select,.login-caixa input,.bloqueio-form input,.entrega input:not([type="radio"]),.entrega select{height:44px;border:1.5px solid var(--prim);border-radius:99px;padding:0 18px;color:#000;font-weight:600}
+.item-edit select,.entrega select{appearance:none;-webkit-appearance:none;padding-right:40px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1.5l6 6 6-6' fill='none' stroke='%23a46cf0' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 16px center}
+
+/* ---------- Entrega, Pix, taxa ---------- */
+.entrega{border:1.5px solid var(--borda);border-radius:18px;padding:12px 16px;display:flex;flex-direction:column;gap:10px;margin:0}
+.entrega legend{font-weight:800;color:var(--prof);padding:0 6px;font-size:.85rem}
+.opcao{flex-direction:row;align-items:center;gap:10px;font-weight:600;cursor:pointer}
+.opcao input{width:18px;height:18px;accent-color:var(--prim)}
+.taxa-linha{display:flex;justify-content:space-between;margin:2px 0;color:#000;font-weight:600}
+.pix-caixa{background:#f6eafe;border-radius:18px;padding:14px 18px;width:100%;display:flex;flex-direction:column;gap:6px;align-items:center;word-break:break-word}
+.pix-caixa p{margin:0}
+.periodo.bloqueado{color:#b3261e;background:#fde0de;border-radius:14px;padding:10px 14px}
+.modal.sucesso .btn.sec{width:100%}
+
+/* ---------- Impressão (comprovante em PDF) ---------- */
+.print-only{display:none}
+@media print{
+  .no-print{display:none!important}
+  .print-only{display:block}
+  body{background:#fff}
+  .comprovante{font-family:var(--sans);color:#000;padding:8mm}
+  .comprovante h1{color:var(--prim-esc);margin:0}
+  .comprovante .comp-sub{font-size:1.2rem;font-weight:700;color:var(--prof);margin:2px 0 14px}
+  .comprovante table{margin:14px 0}
+  .comprovante th,.comprovante td{border:1px solid #ddd;padding:8px 10px}
+  .comprovante .comp-nota{font-size:.85rem;margin-top:18px}
+  @page{margin:14mm}
+}

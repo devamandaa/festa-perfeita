@@ -1,13 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
+import Painel from './Painel'
 import {
   INSTAGRAM,
   ITENS,
+  PIX_CHAVE,
+  REGIOES,
+  SINAL_PERCENTUAL,
   WHATSAPP,
+  bloqueioNoPeriodo,
   brl,
   dias,
   disponivel,
+  idCurto,
+  rotuloCobranca,
+  subtotal,
+  type Bloqueio,
   type Categoria,
+  type Entrega,
   type Item,
   type Reserva,
   type Status,
@@ -64,22 +74,25 @@ function Revelar({ children, className = '' }: { children: React.ReactNode; clas
 
 function Foto({ item, grande = false }: { item: Item; grande?: boolean }) {
   const [erro, setErro] = useState(false)
+  const src = item.foto ?? `${import.meta.env.BASE_URL}fotos/${item.id}.jpg`
   return (
     <div className={`foto cat-${item.categoria === 'Itens de Festa' ? 'festa' : item.categoria === 'Móveis' ? 'moveis' : 'deco'} ${grande ? 'grande' : ''}`}>
       {!erro && (
         <>
           <img
             className="fundo"
-            src={`${import.meta.env.BASE_URL}fotos/${item.id}.jpg`}
+            src={src}
             alt=""
             aria-hidden
             loading="lazy"
+            decoding="async"
           />
           <img
             className="principal"
-            src={`${import.meta.env.BASE_URL}fotos/${item.id}.jpg`}
+            src={src}
             alt={item.nome}
             loading="lazy"
+            decoding="async"
             onError={() => setErro(true)}
           />
         </>
@@ -113,9 +126,15 @@ function Baloes() {
 export default function App() {
   const [visao, setVisao] = useState<'loja' | 'painel'>('loja')
   const [reservas, setReservas] = usePersistido<Reserva[]>('fp-reservas', [])
-  const [carrinho, setCarrinho] = useState<Record<string, number>>({})
-  const [inicio, setInicio] = useState('')
-  const [fim, setFim] = useState('')
+  const [itens, setItens] = usePersistido<Item[]>('fp-itens-v1', ITENS)
+  const [bloqueios, setBloqueios] = usePersistido<Bloqueio[]>('fp-bloqueios', [])
+  const [carrinho, setCarrinho] = usePersistido<Record<string, number>>('fp-carrinho', {})
+  const [inicio, setInicio] = usePersistido('fp-inicio', '')
+  const [fim, setFim] = usePersistido('fp-fim', '')
+  const [tipoEntrega, setTipoEntrega] = useState<'retirada' | 'entrega'>('retirada')
+  const [regiao, setRegiao] = useState(REGIOES[0].nome)
+  const [endereco, setEndereco] = useState('')
+  const [comprovante, setComprovante] = useState<Reserva | null>(null)
   const [busca, setBusca] = useState('')
   const [cat, setCat] = useState<'Todos' | Categoria>('Todos')
   const [ordem, setOrdem] = useState<'nome' | 'menor' | 'maior'>('nome')
@@ -154,11 +173,24 @@ export default function App() {
     return () => window.removeEventListener('keydown', f)
   }, [])
 
+  useEffect(() => {
+    if (!comprovante) return
+    const fechar = () => setComprovante(null)
+    window.addEventListener('afterprint', fechar)
+    const t = setTimeout(() => window.print(), 150)
+    return () => {
+      clearTimeout(t)
+      window.removeEventListener('afterprint', fechar)
+    }
+  }, [comprovante])
+
   const periodoOk = !!inicio && !!fim && fim >= inicio
   const qtdDias = periodoOk ? dias(inicio, fim) : 1
+  const bloqueio = bloqueioNoPeriodo(bloqueios, inicio, fim)
+  const livreEm = (item: Item) => (bloqueio ? 0 : disponivel(item, reservas, inicio, fim))
 
   const lista = useMemo(() => {
-    const l = ITENS.filter(
+    const l = itens.filter(
       (i) =>
         (cat === 'Todos' || i.categoria === cat) &&
         i.nome.toLowerCase().includes(busca.toLowerCase()),
@@ -166,21 +198,24 @@ export default function App() {
     return [...l].sort((a, b) =>
       ordem === 'nome' ? a.nome.localeCompare(b.nome) : ordem === 'menor' ? a.preco - b.preco : b.preco - a.preco,
     )
-  }, [cat, busca, ordem])
+  }, [itens, cat, busca, ordem])
 
   const linhas = Object.entries(carrinho)
     .filter(([, q]) => q > 0)
-    .map(([id, qtd]) => {
-      const item = ITENS.find((i) => i.id === id)!
-      return { item, qtd, subtotal: item.preco * qtd * qtdDias }
+    .flatMap(([id, qtd]) => {
+      const item = itens.find((i) => i.id === id)
+      return item ? [{ item, qtd, subtotal: subtotal(item, qtd, qtdDias) }] : []
     })
-  const total = linhas.reduce((s, l) => s + l.subtotal, 0)
+  const taxaEntrega = tipoEntrega === 'entrega' ? (REGIOES.find((r) => r.nome === regiao)?.taxa ?? 0) : 0
+  const subtotalItens = linhas.reduce((s, l) => s + l.subtotal, 0)
+  const total = subtotalItens + (linhas.length ? taxaEntrega : 0)
   const totalItens = linhas.reduce((s, l) => s + l.qtd, 0)
 
   function alterar(item: Item, delta: number) {
-    const max = disponivel(item, reservas, inicio, fim)
+    const max = livreEm(item)
     const atual = carrinho[item.id] ?? 0
     const novo = Math.min(max, Math.max(0, atual + delta))
+    if (delta > 0 && bloqueio) return setToast(`Período indisponível: ${bloqueio.motivo}.`)
     if (delta > 0 && novo === atual) return setToast(`Só temos ${max} unidade(s) de "${item.nome}" nesse período.`)
     setCarrinho((c) => ({ ...c, [item.id]: novo }))
     if (delta > 0 && atual === 0) setToast(`${item.nome} adicionado ao carrinho`)
@@ -189,14 +224,20 @@ export default function App() {
   function confirmar() {
     setAviso('')
     if (!periodoOk) return setAviso('Escolha o período da festa (início e fim).')
+    if (bloqueio) return setAviso(`Esse período está indisponível (${bloqueio.motivo}). Escolha outras datas.`)
     if (!linhas.length) return setAviso('Adicione pelo menos um item.')
+    if (tipoEntrega === 'entrega' && !endereco.trim()) return setAviso('Informe o endereço de entrega.')
     if (!cliente.trim()) return setAviso('Informe seu nome.')
     if (telefone.replace(/\D/g, '').length < 10) return setAviso('Informe um WhatsApp válido com DDD.')
     for (const l of linhas) {
-      if (l.qtd > disponivel(l.item, reservas, inicio, fim)) {
+      if (l.qtd > livreEm(l.item)) {
         return setAviso(`"${l.item.nome}" não tem mais ${l.qtd} unidade(s) nesse período.`)
       }
     }
+    const entrega: Entrega =
+      tipoEntrega === 'entrega'
+        ? { tipo: 'entrega', regiao, endereco: endereco.trim(), taxa: taxaEntrega }
+        : { tipo: 'retirada', taxa: 0 }
     const nova: Reserva = {
       id: crypto.randomUUID(),
       itens: linhas.map((l) => ({ itemId: l.item.id, qtd: l.qtd })),
@@ -207,19 +248,22 @@ export default function App() {
       status: 'pendente',
       total,
       pagamento,
+      entrega,
     }
     setReservas((r) => [nova, ...r])
     setCarrinho({})
+    setEndereco('')
     setAberto(false)
     setEtapa('carrinho')
     setSucesso(nova)
   }
 
   function linkWhats(r: Reserva) {
-    const itens = r.itens
-      .map((i) => `• ${i.qtd}x ${ITENS.find((x) => x.id === i.itemId)?.nome}`)
+    const itensTxt = r.itens
+      .map((i) => `• ${i.qtd}x ${itens.find((x) => x.id === i.itemId)?.nome ?? 'Item'}`)
       .join('\n')
-    const msg = `Olá! Fiz um pedido no site Festa Perfeita.\n\nNome: ${r.cliente}\nPeríodo: ${fmt(r.inicio)} a ${fmt(r.fim)}\n${itens}\nPagamento: ${r.pagamento ?? '-'}\nTotal: ${brl(r.total)}\nPedido nº ${r.id.slice(0, 6).toUpperCase()}`
+    const ent = r.entrega?.tipo === 'entrega' ? `Entrega (${r.entrega.regiao}): ${r.entrega.endereco}` : 'Retirada na loja'
+    const msg = `Olá! Fiz um pedido no site Festa Perfeita.\n\nNome: ${r.cliente}\nPeríodo: ${fmt(r.inicio)} a ${fmt(r.fim)}\n${itensTxt}\n${ent}\nPagamento: ${r.pagamento ?? '-'}\nTotal: ${brl(r.total)}\nPedido nº ${idCurto(r.id)}`
     return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`
   }
 
@@ -235,6 +279,7 @@ export default function App() {
 
   return (
     <>
+      <div className="no-print">
       <a className="pular" href="#catalogo">Pular para o catálogo</a>
       <header className={`topo ${rolou ? 'rolou' : ''}`}>
         <a className="marca" href="#inicio" onClick={() => ir('loja')}>
@@ -264,7 +309,15 @@ export default function App() {
       </header>
 
       {visao === 'painel' ? (
-        <Painel reservas={reservas} onStatus={mudarStatus} />
+        <Painel
+          reservas={reservas}
+          onStatus={mudarStatus}
+          itens={itens}
+          setItens={setItens}
+          bloqueios={bloqueios}
+          setBloqueios={setBloqueios}
+          onComprovante={setComprovante}
+        />
       ) : (
         <main>
           <section className="hero" id="inicio">
@@ -346,7 +399,9 @@ export default function App() {
                 ))}
               </div>
             </div>
-            {periodoOk ? (
+            {bloqueio ? (
+              <p className="periodo bloqueado" role="alert">⛔ Período indisponível ({bloqueio.motivo}). Escolha outras datas.</p>
+            ) : periodoOk ? (
               <p className="periodo">📅 {fmt(inicio)} a {fmt(fim)} · {qtdDias} dia(s)</p>
             ) : (
               <p className="periodo dica">Escolha as datas para ver o que está livre e calcular o orçamento.</p>
@@ -354,7 +409,7 @@ export default function App() {
 
             <div className="grade">
               {lista.map((item) => {
-                const livre = disponivel(item, reservas, inicio, fim)
+                const livre = livreEm(item)
                 const n = carrinho[item.id] ?? 0
                 return (
                   <article key={item.id} className={livre === 0 ? 'card esgotado' : 'card'}>
@@ -365,7 +420,7 @@ export default function App() {
                     <div className="card-corpo">
                       <h3>{item.nome}</h3>
                       <p className="desc">{item.descricao}</p>
-                      <p className="preco">{brl(item.preco)} <small>/ dia</small></p>
+                      <p className="preco">{brl(item.preco)} <small>{rotuloCobranca(item)}</small></p>
                       <p className={livre === 0 ? 'disp nao' : livre <= 2 ? 'disp pouco' : 'disp'}>
                         <i />
                         {livre === 0 ? 'Indisponível no período' : livre <= 2 ? `Últimas ${livre} unidade(s)` : `${livre} disponíveis`}
@@ -454,7 +509,7 @@ export default function App() {
               {[
                 ['Como sei se um item está livre na minha data?', 'Escolha o período no catálogo. Cada item mostra quantas unidades estão disponíveis naquelas datas.'],
                 ['O pedido já confirma a reserva?', 'Não. Ele fica pendente até a locadora aprovar. Depois da aprovação, as datas ficam bloqueadas para outros clientes.'],
-                ['Como é calculado o valor?', 'Preço da diária × quantidade × número de dias do período escolhido.'],
+                ['Como é calculado o valor?', 'Itens cobrados por dia: preço × quantidade × número de dias. Itens cobrados por locação: preço × quantidade, sem multiplicar pelos dias. Se escolher entrega, soma-se a taxa da região.'],
                 ['Posso cancelar?', 'Sim. Fale com a locadora pelo WhatsApp informando o número do pedido.'],
               ].map(([q, a]) => (
                 <details key={q}>
@@ -505,11 +560,11 @@ export default function App() {
               <span className="tag fixa">{detalhe.categoria}</span>
               <h3>{detalhe.nome}</h3>
               <p>{detalhe.descricao}</p>
-              <p className="preco">{brl(detalhe.preco)} <small>/ dia</small></p>
-              <p className="disp"><i />{disponivel(detalhe, reservas, inicio, fim)} unidade(s) {periodoOk ? 'livres no período' : 'em estoque'}</p>
+              <p className="preco">{brl(detalhe.preco)} <small>{rotuloCobranca(detalhe)}</small></p>
+              <p className="disp"><i />{livreEm(detalhe)} unidade(s) {periodoOk ? 'livres no período' : 'em estoque'}</p>
               <button
                 className="btn cheio"
-                disabled={disponivel(detalhe, reservas, inicio, fim) === 0}
+                disabled={livreEm(detalhe) === 0}
                 onClick={() => { alterar(detalhe, 1); setDetalhe(null) }}
               >
                 Adicionar ao carrinho
@@ -525,11 +580,26 @@ export default function App() {
             <div className="ok">🎉</div>
             <h3>Pedido enviado!</h3>
             <p>
-              Pedido nº <strong>{sucesso.id.slice(0, 6).toUpperCase()}</strong> · {brl(sucesso.total)}
+              Pedido nº <strong>{idCurto(sucesso.id)}</strong> · {brl(sucesso.total)}
               <br />
               A locadora vai analisar e confirmar com você. Agilize chamando no WhatsApp:
             </p>
+            {sucesso.pagamento === 'Pix' && (
+              <div className="pix-caixa">
+                <p>Sinal de {SINAL_PERCENTUAL}% para garantir a reserva: <strong>{brl((sucesso.total * SINAL_PERCENTUAL) / 100)}</strong></p>
+                <p>Chave Pix: <strong>{PIX_CHAVE}</strong></p>
+                <button
+                  className="btn pequeno sec"
+                  onClick={() => {
+                    void navigator.clipboard?.writeText(PIX_CHAVE).then(() => setToast('Chave Pix copiada'), () => setToast('Não foi possível copiar'))
+                  }}
+                >
+                  Copiar chave Pix
+                </button>
+              </div>
+            )}
             <a className="btn cheio" href={linkWhats(sucesso)} target="_blank" rel="noreferrer">Enviar pelo WhatsApp</a>
+            <button className="btn cheio sec" onClick={() => setComprovante(sucesso)}>Baixar comprovante (PDF)</button>
             <button className="link" onClick={() => setSucesso(null)}>Fechar</button>
           </div>
         </div>
@@ -561,11 +631,14 @@ export default function App() {
                         <button className="link" onClick={() => setCarrinho((c) => ({ ...c, [l.item.id]: 0 }))}>remover</button>
                       </div>
                     ) : (
-                      <small>{l.qtd} × {brl(l.item.preco)} × {qtdDias} dia(s)</small>
+                      <small>{l.qtd} × {brl(l.item.preco)}{l.item.cobranca === 'locacao' ? ' (por locação)' : ` × ${qtdDias} dia(s)`}</small>
                     )}
                   </li>
                 ))}
               </ul>
+            )}
+            {etapa === 'checkout' && taxaEntrega > 0 && (
+              <p className="taxa-linha"><span>Taxa de entrega ({regiao})</span><span>{brl(taxaEntrega)}</span></p>
             )}
             <p className="total">Total <strong>{brl(total)}</strong></p>
             {etapa === 'carrinho' ? (
@@ -588,6 +661,29 @@ export default function App() {
               <>
                 <label>Nome<input value={cliente} onChange={(e) => setCliente(e.target.value)} autoComplete="name" /></label>
                 <label>WhatsApp<input value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(45) 90000-0000" inputMode="tel" autoComplete="tel" /></label>
+                <fieldset className="entrega">
+                  <legend>Retirada ou entrega</legend>
+                  <label className="opcao">
+                    <input type="radio" name="entrega" checked={tipoEntrega === 'retirada'} onChange={() => setTipoEntrega('retirada')} />
+                    Retirar na loja (grátis)
+                  </label>
+                  <label className="opcao">
+                    <input type="radio" name="entrega" checked={tipoEntrega === 'entrega'} onChange={() => setTipoEntrega('entrega')} />
+                    Receber no endereço da festa
+                  </label>
+                  {tipoEntrega === 'entrega' && (
+                    <>
+                      <label>Região
+                        <select value={regiao} onChange={(e) => setRegiao(e.target.value)}>
+                          {REGIOES.map((r) => <option key={r.nome} value={r.nome}>{r.nome} — {brl(r.taxa)}</option>)}
+                        </select>
+                      </label>
+                      <label>Endereço completo
+                        <input value={endereco} onChange={(e) => setEndereco(e.target.value)} placeholder="Rua, número, bairro, cidade" autoComplete="street-address" />
+                      </label>
+                    </>
+                  )}
+                </fieldset>
                 <label>Forma de pagamento
                   <select value={pagamento} onChange={(e) => setPagamento(e.target.value)}>
                     <option>Pix</option>
@@ -605,61 +701,50 @@ export default function App() {
           </aside>
         </div>
       )}
+      </div>
+      {comprovante && <Comprovante r={comprovante} itens={itens} />}
     </>
   )
 }
 
-function Painel({ reservas, onStatus }: { reservas: Reserva[]; onStatus: (id: string, s: Status) => void }) {
-  const pend = reservas.filter((r) => r.status === 'pendente').length
-  const apr = reservas.filter((r) => r.status === 'aprovada')
+/** Comprovante do pedido: só aparece na impressão (Salvar como PDF). */
+function Comprovante({ r, itens }: { r: Reserva; itens: Item[] }) {
+  const d = dias(r.inicio, r.fim)
+  const linhas = r.itens.flatMap((i) => {
+    const item = itens.find((x) => x.id === i.itemId)
+    return item ? [{ item, qtd: i.qtd, sub: subtotal(item, i.qtd, d) }] : []
+  })
+  const taxa = r.entrega?.taxa ?? 0
   return (
-    <main className="secao">
-      <p className="eyebrow">Painel</p>
-      <h2>Área da locadora</h2>
-      <p className="sub">
-        Ao aprovar, as datas ficam bloqueadas; ao recusar, os itens voltam ao estoque. (Protótipo: sem
-        login, dados salvos neste navegador.)
+    <div className="print-only comprovante">
+      <h1>Festa Perfeita</h1>
+      <p className="comp-sub">Comprovante de pedido nº {idCurto(r.id)}</p>
+      <p><strong>Cliente:</strong> {r.cliente} · {r.telefone}</p>
+      <p><strong>Período:</strong> {fmt(r.inicio)} a {fmt(r.fim)} ({d} dia(s))</p>
+      <p>
+        <strong>Entrega:</strong>{' '}
+        {r.entrega?.tipo === 'entrega' ? `${r.entrega.regiao} — ${r.entrega.endereco}` : 'Retirada na loja'}
       </p>
-      <div className="metricas">
-        <div className="caixa"><span>Pendentes</span><strong>{pend}</strong></div>
-        <div className="caixa"><span>Aprovados</span><strong>{apr.length}</strong></div>
-        <div className="caixa"><span>Receita aprovada</span><strong>{brl(apr.reduce((s, r) => s + r.total, 0))}</strong></div>
-      </div>
-      <h3>Pedidos</h3>
-      {reservas.length === 0 && <p className="vazio">Nenhum pedido ainda. Faça um pedido na loja para vê-lo aqui.</p>}
-      <div className="pedidos">
-        {reservas.map((r) => (
-          <article key={r.id} className="caixa">
-            <div className="linha-topo">
-              <strong>{r.cliente} <small>#{r.id.slice(0, 6).toUpperCase()}</small></strong>
-              <span className={`status ${r.status}`}>{r.status}</span>
-            </div>
-            <p>{fmt(r.inicio)} a {fmt(r.fim)} · {r.telefone} · <strong>{brl(r.total)}</strong></p>
-            <ul>
-              {r.itens.map((i) => (
-                <li key={i.itemId}>{i.qtd}× {ITENS.find((x) => x.id === i.itemId)?.nome}</li>
-              ))}
-            </ul>
-            {r.status === 'pendente' && (
-              <div className="acoes">
-                <button className="btn pequeno" onClick={() => onStatus(r.id, 'aprovada')}>Aprovar</button>
-                <button className="btn pequeno sec" onClick={() => onStatus(r.id, 'recusada')}>Recusar</button>
-              </div>
-            )}
-          </article>
-        ))}
-      </div>
-      <h3>Estoque</h3>
-      <div className="tabela-wrap">
-        <table>
-          <thead><tr><th>Item</th><th>Categoria</th><th>Diária</th><th>Estoque</th></tr></thead>
-          <tbody>
-            {ITENS.map((i) => (
-              <tr key={i.id}><td>{i.emoji} {i.nome}</td><td>{i.categoria}</td><td>{brl(i.preco)}</td><td>{i.estoque}</td></tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </main>
+      <p><strong>Pagamento:</strong> {r.pagamento ?? '-'} · <strong>Situação:</strong> {r.status}</p>
+      <table>
+        <thead><tr><th>Item</th><th>Qtd</th><th>Valor unit.</th><th>Subtotal</th></tr></thead>
+        <tbody>
+          {linhas.map((l) => (
+            <tr key={l.item.id}>
+              <td>{l.item.nome}</td>
+              <td>{l.qtd}</td>
+              <td>{brl(l.item.preco)} {rotuloCobranca(l.item)}</td>
+              <td>{brl(l.sub)}</td>
+            </tr>
+          ))}
+          {taxa > 0 && <tr><td colSpan={3}>Taxa de entrega</td><td>{brl(taxa)}</td></tr>}
+        </tbody>
+        <tfoot><tr><td colSpan={3}><strong>Total</strong></td><td><strong>{brl(r.total)}</strong></td></tr></tfoot>
+      </table>
+      {r.pagamento === 'Pix' && (
+        <p>Sinal de {SINAL_PERCENTUAL}% para garantir a reserva: <strong>{brl((r.total * SINAL_PERCENTUAL) / 100)}</strong> · Chave Pix: {PIX_CHAVE}</p>
+      )}
+      <p className="comp-nota">A reserva só é confirmada após a aprovação da locadora. Contato: {INSTAGRAM}</p>
+    </div>
   )
 }
